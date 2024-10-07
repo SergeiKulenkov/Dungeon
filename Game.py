@@ -1,104 +1,248 @@
 from enum import Enum
 from typing import Any
-from typing import Dict
 import os.path
-import Config
+
 import pygame
-from EventHandler import EventHandler
+from Config import GeneralConfig
+from Config import GameConfig
+from Config import EnemyConfig
+from Config import RoomConfig
 
-SCREEN = pygame.display.set_mode((Config.SCREEN_WIDTH, Config.SCREEN_HEIGHT))
-BORDER_ACTION = pygame.Rect(SCREEN.get_width() * Config.BORDER_ACTION_OFFSET_X_PERCENT, 0, Config.BORDER_WIDTH, SCREEN.get_height() - Config.BORDER_STATS_OFFSET_Y)
-BORDER_STATS = pygame.Rect(0, SCREEN.get_height() - Config.BORDER_STATS_OFFSET_Y, SCREEN.get_width(), Config.BORDER_WIDTH)
+SCREEN = pygame.display.set_mode((GameConfig.SCREEN_WIDTH, GameConfig.SCREEN_HEIGHT))
+BORDER_ACTION = pygame.Rect(SCREEN.get_width() * GameConfig.BORDER_ACTION_OFFSET_X_PERCENT, 0, GameConfig.BORDER_WIDTH, SCREEN.get_height() - GameConfig.BORDER_STATS_OFFSET_Y)
+BORDER_STATS = pygame.Rect(0, SCREEN.get_height() - GameConfig.BORDER_STATS_OFFSET_Y, SCREEN.get_width(), GameConfig.BORDER_WIDTH)
 
-DOOR_IMAGE = pygame.image.load(os.path.join(Config.IMAGES_PATH, Config.DOOR_IMAGE))
-DOOR = pygame.transform.scale(DOOR_IMAGE, (Config.DOOR_WIDTH, Config.DOOR_HEIGHT))
-DOOR_POSITION_X = BORDER_ACTION.x + (SCREEN.get_width() - BORDER_ACTION.x) / 2 - Config.DOOR_WIDTH / 2
-DOOR_POSITION_Y = BORDER_STATS.y / 2 - Config.DOOR_HEIGHT / 2
+DOOR_POSITION_X = BORDER_ACTION.x + (SCREEN.get_width() - BORDER_ACTION.x) / 2 - GeneralConfig.DOOR_WIDTH / 2
+DOOR_POSITION_Y = BORDER_STATS.y / 2 - GeneralConfig.DOOR_HEIGHT / 2
 
-leftMouseClickEventType = pygame.event.custom_type()
-mouseMotionEventType = pygame.event.custom_type()
-gameStartedEventType = pygame.event.custom_type()
+class GameEvents:
+    leftMouseClickEventType = pygame.event.custom_type()
+    mouseMotionEventType = pygame.event.custom_type()
+    gameStartedEventType = pygame.event.custom_type()
+    roomEnteredEventType = pygame.event.custom_type()
+    gameFinishStartedEventType = pygame.event.custom_type()
+    gameFinishedEventType = pygame.event.custom_type()
 
-def subscribe(eventType: pygame.event.EventType, subscriber: Any):
+def subscribeToEvent(eventType: pygame.event.EventType, subscriber: Any):
     Game.eventHandler.subscribe(eventType, subscriber)
 
-from Button import Button
+def unSubscribeFromEvent(eventType: pygame.event.EventType, subscriber: Any):
+    Game.eventHandler.unsubscribe(eventType, subscriber)
+
+from EventHandler import EventHandler
 from Player import Player
-from Player import CharacterType
+from Player import PlayerEvents
+from Item import ItemType
 from ButtonManager import ButtonManager
-from ButtonManager import startButtonPressedEventType
+from ButtonManager import ButtonType
+from ButtonManager import ButtonEvents
 from RoomManager import RoomManager
+from EnemyManager import EnemyManager
+from EnemyManager import EnemyEvents
+from ActionLogManager import ActionLogManager
+
+class DelayType(Enum):
+    NONE = 0
+    START = 1
+    NEXT_ROOM = 2
+    ENEMY_ATTACK = 3
+    FINISH = 4
+
+class GameState(Enum):
+    NONE = 0
+    STARTED = 1
+    FINISHED = 2
+    RESTARTED = 3
 
 class Game:
-    eventHandler = EventHandler()
+    eventHandler: EventHandler = None
+    DOOR_IMAGE = pygame.image.load(os.path.join(GeneralConfig.IMAGES_PATH, GameConfig.DOOR_IMAGE))
+    DOOR = pygame.transform.scale(DOOR_IMAGE, (GeneralConfig.DOOR_WIDTH, GeneralConfig.DOOR_HEIGHT))
 
     def __init__(self):
-        self.gameClock = pygame.time.Clock()
-        self.deltaTime = 0.0
-        self.mousePosition = pygame.math.Vector2()
-        self.isStarted = False
-        self.isRunning = True
-        self.startDelayTimer = 0.0
+        self._gameClock = pygame.time.Clock()
+        self._deltaTime = 0.0
+        self._gameState = GameState.NONE
+        self._isRunning = True
+        self._mousePosition = pygame.math.Vector2()
 
-        # remove from class variables??
-        self.player = None
-        self.buttonManager = ButtonManager()
-        self.roomManager = RoomManager()
+        self._delayTimer = 0.0
+        self._delayType = DelayType.NONE
+        self._roomCount = 0
+        self._finishText: pygame.Surface = None
+        self._scoreText: list[str] = []
 
-        self.leftMouseClickEvent = pygame.event.Event(leftMouseClickEventType)
-        self.mouseMotionEvent = pygame.event.Event(mouseMotionEventType)
-        self.gameStartedEvent = pygame.event.Event(gameStartedEventType)
-        subscribe(pygame.QUIT, self.stopGame)
-        subscribe(pygame.MOUSEBUTTONDOWN, self.handleMouseClick)
-        subscribe(pygame.MOUSEMOTION, self.handleMouseMotion)
-        subscribe(startButtonPressedEventType, self.handleStartButtonPress)
+        Game.eventHandler = EventHandler()
+        self._buttonManager = ButtonManager()
+        self._roomManager: RoomManager = None
+        self._enemyManager: EnemyManager = None
+        self._actionLogManager: ActionLogManager = None
+        self._player: Player = None
 
-    def drawWindow(self):
-        SCREEN.fill(Config.BLACK)
+        self._leftMouseClickEvent = pygame.event.Event(GameEvents.leftMouseClickEventType, { GameConfig.MOUSE_POSITION_VALUE : None })
+        self._mouseMotionEvent = pygame.event.Event(GameEvents.mouseMotionEventType, { GameConfig.MOUSE_POSITION_VALUE : None })
+        self._gameStartedEvent = pygame.event.Event(GameEvents.gameStartedEventType)
+        self._roomEnteredEvent = pygame.event.Event(GameEvents.roomEnteredEventType)
+        self._gameFinishStartedEvent = pygame.event.Event(GameEvents.gameFinishStartedEventType)
+        self._gameFinishedEvent = pygame.event.Event(GameEvents.gameFinishedEventType)
+
+        self._subscribeToEvents()
+
+    def _subscribeToEvents(self):
+        subscribeToEvent(pygame.QUIT, self._stopGame)
+        subscribeToEvent(pygame.MOUSEBUTTONDOWN, self._handleMouseClick)
+        subscribeToEvent(pygame.MOUSEMOTION, self._handleMouseMotion)
+        subscribeToEvent(ButtonEvents.buttonPressedEventType, self._delayButtonPress)
+        subscribeToEvent(PlayerEvents.playerTakenItemEventType, self._onItemTaken)
+        subscribeToEvent(PlayerEvents.enemyDefeatedEventType, self._delayNextRoom)
+        subscribeToEvent(PlayerEvents.playerDiedEventType, self._startGameOver)
+        subscribeToEvent(EnemyEvents.enemyStartedAttackEvenType, self._startEnemyAttack)
+
+    def _drawWindow(self):
+        SCREEN.fill(GeneralConfig.BLACK)
         # the door is always there
-        SCREEN.blit(DOOR, (DOOR_POSITION_X, DOOR_POSITION_Y))
+        SCREEN.blit(Game.DOOR, (DOOR_POSITION_X, DOOR_POSITION_Y))
 
-        if self.isStarted:
-            pygame.draw.rect(SCREEN, Config.GREY, BORDER_ACTION)
-            pygame.draw.rect(SCREEN, Config.GREY, BORDER_STATS)
-            self.player.draw()
-            self.roomManager.drawRoom()
+        if self._gameState == GameState.STARTED:
+            pygame.draw.rect(SCREEN, GeneralConfig.GREY, BORDER_ACTION)
+            pygame.draw.rect(SCREEN, GeneralConfig.GREY, BORDER_STATS)
+            self._player.draw()
+            self._roomManager.drawRoom()
+            self._actionLogManager.drawLogs()
+            self._enemyManager.draw()
+        elif self._gameState == GameState.FINISHED:
+            self._player.draw()
+            self._actionLogManager.drawLogs()
 
-        self.buttonManager.drawButtons()
+            positionY = SCREEN.get_height() * GameConfig.FINISH_TEXT_OFFSET_Y
+            SCREEN.blit(self._finishText, (SCREEN.get_width() / 2 - self._finishText.get_width() / 2,
+                                           positionY - self._finishText.get_height() / 2))
 
+            positionY += self._finishText.get_height() / 2 + GameConfig.SCORE_TEXT_OFFSET
+            for score in self._scoreText:
+                SCREEN.blit(score, (SCREEN.get_width() / 2 - score.get_width() / 2, positionY))
+                positionY += GameConfig.SCORE_TEXT_OFFSET + score.get_height()
+
+        self._buttonManager.drawButtons()
         pygame.display.update()
 
-    def handleStartButtonPress(self):
-        self.startDelayTimer = Config.GAME_START_DELAY
+    def _startGame(self):
+        if self._gameState is not GameState.RESTARTED:
+            self._roomManager = RoomManager()
+            self._enemyManager = EnemyManager()
+            self._actionLogManager = ActionLogManager()
+            self._player = Player()
 
-    def startGame(self):
-        self.player = Player(CharacterType.DEFAULT)
-        self.startDelayTimer = 0.0
-        self.isStarted = True
-        pygame.event.post(self.gameStartedEvent)
+        self._delayTimer = 0.0
+        self._gameState = GameState.STARTED
+        self._roomCount += 1
+        pygame.event.post(self._gameStartedEvent)
 
-    def stopGame(self):
-        self.isRunning = False
+    def _reset(self):
+        self._roomCount = 0
+        self._scoreText = []
+        self._buttonManager.reset()
+        self._roomManager.reset()
+        self._enemyManager.reset()
+        self._actionLogManager.reset()
+        self._player.reset()
 
-    def handleMouseClick(self, *args):
-        self.mousePosition = pygame.math.Vector2(pygame.mouse.get_pos())
-        # add to Config or local const
-        self.leftMouseClickEvent.dict['mousePos'] = self.mousePosition
-        pygame.event.post(self.leftMouseClickEvent)
+    def _stopGame(self):
+        self._isRunning = False
 
-    def handleMouseMotion(self, *args):
-        self.mousePosition = pygame.math.Vector2(pygame.mouse.get_pos())
-        self.mouseMotionEvent.dict['mousePos'] = self.mousePosition
-        pygame.event.post(self.mouseMotionEvent)
+    def _handleMouseClick(self, *mouseClickValues):
+        self._mousePosition = pygame.math.Vector2(pygame.mouse.get_pos())
+        self._leftMouseClickEvent.dict[GameConfig.MOUSE_POSITION_VALUE] = self._mousePosition
+        pygame.event.post(self._leftMouseClickEvent)
+
+    def _handleMouseMotion(self, *mouseMotionValues):
+        self._mousePosition = pygame.math.Vector2(pygame.mouse.get_pos())
+        self._mouseMotionEvent.dict[GameConfig.MOUSE_POSITION_VALUE] = self._mousePosition
+        pygame.event.post(self._mouseMotionEvent)
+
+    def _delayButtonPress(self, buttonType: ButtonType):
+        match buttonType:
+            case ButtonType.START:
+                if self._gameState is GameState.FINISHED:
+                    self._reset()
+                    self._gameState = GameState.RESTARTED
+                self._delayType = DelayType.START
+                self._delayTimer = GameConfig.GAME_START_DELAY
+            case ButtonType.EAT | ButtonType.LEAVE:
+                self._delayNextRoom()
+            case ButtonType.QUIT:
+                self._stopGame()
+
+    def _delayNextRoom(self):
+            if self._roomCount < GameConfig.MAX_NUMBER_OF_ROOMS:
+                self._delayType = DelayType.NEXT_ROOM
+                self._delayTimer = RoomConfig.NEXT_ROOM_DELAY
+            else:
+                if self._gameState is not GameState.FINISHED:
+                    self._finish(False)
+
+    def _onItemTaken(self, itemType: ItemType):
+        self._delayNextRoom()
+
+    def _enterNextRoom(self):
+        self._delayTimer = 0.0
+        self._roomCount += 1
+        pygame.event.post(self._roomEnteredEvent)
+
+    def _startEnemyAttack(self):
+        self._delayType = DelayType.ENEMY_ATTACK
+        self._delayTimer = EnemyConfig.ENEMY_ATTACK_DELAY
+
+    def _finishEnemyAttack(self):
+        self._delayTimer = 0.0
+        self._enemyManager.finishAttack()
+
+    def _startGameOver(self):
+        self._finish(True)
+
+    def _finish(self, isGameOver: bool):
+        self._gameState = GameState.FINISHED
+        self._delayType = DelayType.FINISH
+        self._delayTimer = GameConfig.FINISH_DELAY
+        text = ''
+
+        if isGameOver:
+            text = GameConfig.GAME_OVER_TEXT
+        else:
+            text = GameConfig.FINISH_TEXT
+
+        font = pygame.font.SysFont(GeneralConfig.FONT, GameConfig.FINISH_TEXT_SIZE)
+        self._finishText = font.render(text, 1, GeneralConfig.GREEN)
+
+        font = pygame.font.SysFont(GeneralConfig.FONT, GameConfig.SCORE_TEXT_SIZE)
+        self._scoreText.append(font.render(GameConfig.SCORE_TEXT, 1, GeneralConfig.GREEN))
+        for score in self._player.getScoreText():
+            self._scoreText.append(font.render(score, 1, GeneralConfig.GREEN))
+
+        pygame.event.post(self._gameFinishStartedEvent)
 
     def run(self):
-        while self.isRunning:
+        while self._isRunning:
             self.eventHandler.dispatchEvents(pygame.event.get())
+            self._drawWindow()
+            self._update()
 
-            self.drawWindow()
-            self.gameClock.tick(Config.FPS)
+    def _update(self):
+        self._gameClock.tick(GameConfig.FPS)
+        self._deltaTime = self._gameClock.get_time() / 1000
 
-            if self.startDelayTimer > 0:
-                self.startDelayTimer -= self.gameClock.get_time() / 1000
-            elif self.startDelayTimer < 0:
-                self.startGame()
+        if self._delayTimer > 0:
+            self._delayTimer -= self._deltaTime
+        elif self._delayTimer < 0:
+            match self._delayType:
+                case DelayType.START:
+                    self._startGame()
+                case DelayType.NEXT_ROOM:
+                    self._enterNextRoom()
+                case DelayType.ENEMY_ATTACK:
+                    self._finishEnemyAttack()
+                case DelayType.FINISH:
+                    pygame.event.post(self._gameFinishedEvent)
+                case DelayType.NONE:
+                    pass
+            self._delayType = DelayType.NONE

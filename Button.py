@@ -1,87 +1,94 @@
 import pygame
-import Config
-from enum import Enum
-
-class ButtonType(Enum):
-    START = 1
-    ATTACK = 2
-    ITEM = 3
-    PARRY = 4
-    EVADE = 5
-
-def getTextFont(type):
-    font = None
-    match type:
-        case ButtonType.START:
-            font = pygame.font.SysFont(Config.FONT, Config.START_BUTTON_TEXT_SIZE)
-        case _:
-            font = pygame.font.SysFont(Config.FONT, Config.BUTTON_TEXT_SIZE)
-
-    return font
-
-
-def getTextFromType(type):
-    text = ''
-    match type:
-        case ButtonType.START:
-            text = Config.START_BUTTON_TEXT
-        case ButtonType.ATTACK:
-            text = Config.ATTACK_BUTTON_TEXT
-        case ButtonType.ITEM:
-            text = Config.ITEM_BUTTON_TEXT
-        case ButtonType.PARRY:
-            text = Config.PARRY_BUTTON_TEXT
-        case ButtonType.EVADE:
-            text = Config.EVADE_BUTTON_TEXT
-        case _:
-            text = ''
-
-    return text
+from Game import SCREEN
+from Config import GeneralConfig
+from Config import ButtonsConfig
+from ButtonManager import ButtonType
 
 class Outline:
-    def __init__(self, colour, thickness):
+    def __init__(self, colour: pygame.color, thickness: float):
         self.colour = colour
         self.thickness = thickness
 
-    def draw(self, surface, x, y, buttonWidth, buttonHeight):
-        pygame.draw.rect(surface, self.colour, (x - self.thickness, y - self.thickness,
+    def draw(self, x: float, y: float, buttonWidth: float, buttonHeight: float):
+        pygame.draw.rect(SCREEN, self.colour, (x - self.thickness, y - self.thickness,
                                                 buttonWidth + self.thickness * 2, buttonHeight + self.thickness * 2))
 class Button:
-    def __init__(self, colour, x, y, width, height, type):
+    def __init__(self, colour: pygame.color, x: float, y: float, width: float, height: float, type: ButtonType):
         self.colour = colour
-        self.x = x
-        self.y = y
-        self.width = width
-        self.height = height
-        self.type = type
+        self._position = pygame.math.Vector2(x, y)
+        self._width = width
+        self._height = height
+        self._type = type
+        self._text: pygame.Surface = None
 
-        text = getTextFromType(self.type)
+        text = Button.getTextFromType(self._type)
         if text != '':
-            font = getTextFont(self.type)
+            font = Button.getTextFont(self._type)
             if font is not None:
-                self.text = font.render(text, 1, Config.BLACK)
+                self._text = font.render(text, 1, GeneralConfig.BLACK)
 
         self.hasOutline = False
-        self.outline = Outline(Config.GREEN, Config.BUTTON_OUTLINE_THICKNESS)
-        self.offsetX = self.width / 2 - self.text.get_width() / 2
-        self.offsetY = self.height / 2 - self.text.get_height() / 2
+        self.outline = Outline(GeneralConfig.GREEN, ButtonsConfig.BUTTON_OUTLINE_THICKNESS)
+        self.offsetX = self._width / 2 - self._text.get_width() / 2
+        self.offsetY = self._height / 2 - self._text.get_height() / 2
 
-    def draw(self, surface):
+    @property
+    def type(self) -> ButtonType:
+        return self._type
+
+    def draw(self):
         if self.hasOutline and self.outline is not None:
-            self.outline.draw(surface, self.x, self.y, self.width, self.height)
+            self.outline.draw(self._position.x, self._position.y, self._width, self._height)
 
-        pygame.draw.rect(surface, self.colour, (self.x, self.y, self.width, self.height))
-        surface.blit(self.text, (self.x + self.offsetX, self.y + self.offsetY))
+        pygame.draw.rect(SCREEN, self.colour, (self._position.x, self._position.y, self._width, self._height))
+        SCREEN.blit(self._text, (self._position.x + self.offsetX, self._position.y + self.offsetY))
 
-    def isOver(self, position: pygame.math.Vector2):
-        if position.x > self.x and position.x < self.x + self.width:
-            if position.y > self.y and position.y < self.y + self.height:
-                return True
+    def checkHover(self, position: pygame.math.Vector2) -> bool:
+        hover = False
+        if position.x > self._position.x and position.x < self._position.x + self._width:
+            if position.y > self._position.y and position.y < self._position.y + self._height:
+                hover = True
 
-        return False
+        return hover
 
     def addOutline(self):
         self.hasOutline = True
 
     def removeOutline(self):
         self.hasOutline = False
+
+    @staticmethod
+    def getTextFont(type: ButtonType) -> pygame.font.Font:
+        font = None
+        match type:
+            case ButtonType.START | ButtonType.QUIT:
+                font = pygame.font.SysFont(GeneralConfig.FONT, ButtonsConfig.MENU_BUTTON_TEXT_SIZE)
+            case _:
+                font = pygame.font.SysFont(GeneralConfig.FONT, ButtonsConfig.BUTTON_TEXT_SIZE)
+
+        return font
+
+    @staticmethod
+    def getTextFromType(type: ButtonType) -> str:
+        text = ''
+        match type:
+            case ButtonType.START:
+                text = ButtonsConfig.START_BUTTON_TEXT
+            case ButtonType.LEAVE:
+                text = ButtonsConfig.LEAVE_BUTTON_TEXT
+            case ButtonType.EAT:
+                text = ButtonsConfig.EAT_BUTTON_TEXT
+            case ButtonType.ATTACK:
+                text = ButtonsConfig.ATTACK_BUTTON_TEXT
+            case ButtonType.PARRY:
+                text = ButtonsConfig.PARRY_BUTTON_TEXT
+            case ButtonType.TAKE_ITEM:
+                text = ButtonsConfig.TAKE_ITEM_BUTTON_TEXT
+            case ButtonType.USE_ITEM:
+                text = ButtonsConfig.USE_ITEM_BUTTON_TEXT
+            case ButtonType.QUIT:
+                text = ButtonsConfig.QUIT_BUTTON_TEXT
+            case _:
+                text = ''
+
+        return text

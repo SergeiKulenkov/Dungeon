@@ -1,40 +1,86 @@
 from enum import Enum
 import pygame
 import random
-import Config
-from Game import SCREEN
-from Item import Item
-from ActionLogManager import ActionLogManager
-from EnemyManager import EnemyManager
+import copy
+from Config import RoomConfig
+
+class RoomEvents:
+    roomGeneratedEventType = pygame.event.custom_type()
+    foodEatenEventType = pygame.event.custom_type()
+    itemTakenEventType = pygame.event.custom_type()
 
 class RoomType(Enum):
-    COMBAT = 1
-    TREASURE = 2
-    ITEM = 3
+    COMBAT = 0
+    FOOD = 1
+    ITEM = 2
+
+from Game import subscribeToEvent
+from Game import GameEvents
+from Food import Food
+from Item import Item
+from ButtonManager import ButtonEvents
+from ButtonManager import ButtonType
 
 class RoomManager:
     def __init__(self):
-        self.roomIndex = 0
-        self.currentRoomType = RoomType.ITEM
-        # remove from class variables
-        self.actionLogManager = ActionLogManager()
-        self.enemyManager = EnemyManager()
+        self._currentRoomType: RoomType = None
+        self._roomEvent: Food | Item = None
+        self._itemsInRow = 0
 
-    # event
-    def generateRoom(self):
-        self.currentRoomType = random.randint(1, 3)
-        # event
-        self.actionLogManager.onRoomEntered()
+        self._roomGeneratedEvent = pygame.event.Event(RoomEvents.roomGeneratedEventType, { RoomConfig.ROOM_TYPE_VALUE : None })
+        self._foodEatenEvent = pygame.event.Event(RoomEvents.foodEatenEventType, { RoomConfig.FOOD_HP_VALUE : 0 })
+        self._itemTakenEvent = pygame.event.Event(RoomEvents.itemTakenEventType, { RoomConfig.ITEM_VALUE : None })
+
+        subscribeToEvent(GameEvents.gameStartedEventType, self._onGameStarted)
+        subscribeToEvent(GameEvents.roomEnteredEventType, self._generateRoom)
+        subscribeToEvent(ButtonEvents.buttonPressedEventType, self._handleButtonPress)
+
+    def reset(self):
+        self._itemsInRow = 0
+
+    def _onGameStarted(self):
+        self._generateRoom()
+
+    def _generateRoom(self):
+        randomProbability = random.random()
+        for name, probability in RoomConfig.ROOMS_CONTENTS_PROBABILITIES.items():
+            randomProbability -= probability
+            if randomProbability <= 0:
+                self._currentRoomType = RoomType.__getitem__(name)
+                break
+
+        if self._itemsInRow >= RoomConfig.MAX_ITEMS_IN_ROW:
+            self._currentRoomType = RoomType.COMBAT
+            self._itemsInRow = 0
+
+        match self._currentRoomType:
+            case RoomType.FOOD:
+                self._roomEvent = Food()
+            case RoomType.ITEM:
+                self._itemsInRow += 1
+                chance = random.random()
+                if RoomConfig.ARTIFACT_PROBABILITY >= chance:
+                    self._roomEvent = Item(True)
+                else:
+                    self._roomEvent = Item(False)
+            case _:
+                self._roomEvent = None
+
+        self._roomGeneratedEvent.dict[RoomConfig.ROOM_TYPE_VALUE] = self._currentRoomType
+        pygame.event.post(self._roomGeneratedEvent)
+
+    def _handleButtonPress(self, buttonType: ButtonType):
+        match buttonType:
+            case ButtonType.EAT:
+                if isinstance(self._roomEvent, Food):
+                    self._foodEatenEvent.dict[RoomConfig.FOOD_HP_VALUE] = self._roomEvent.getHP()
+                    pygame.event.post(self._foodEatenEvent)
+            case ButtonType.TAKE_ITEM:
+                if isinstance(self._roomEvent, Item):
+                    self._itemTakenEvent.dict[RoomConfig.ITEM_VALUE] = copy.copy(self._roomEvent)
+                    pygame.event.post(self._itemTakenEvent)
 
     def drawRoom(self):
-        self.actionLogManager.drawLogs()
-
-        match self.currentRoomType:
-            case RoomType.COMBAT:
-                self.enemyManager.spawnEnemy()
-            case RoomType.TREASURE:
-                item = Item()
-                item.draw()
-            case RoomType.ITEM:
-                item = Item()
-                item.draw()
+        match self._currentRoomType:
+            case RoomType.FOOD | RoomType.ITEM:
+                self._roomEvent.draw()
