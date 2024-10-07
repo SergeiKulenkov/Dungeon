@@ -2,7 +2,7 @@ from enum import Enum
 import pygame
 import random
 import copy
-from Config import RoomConfig
+from Game.Config import RoomConfig
 
 class RoomEvents:
     roomGeneratedEventType = pygame.event.custom_type()
@@ -14,12 +14,12 @@ class RoomType(Enum):
     FOOD = 1
     ITEM = 2
 
-from Game import subscribeToEvent
-from Game import GameEvents
-from Food import Food
-from Item import Item
-from ButtonManager import ButtonEvents
-from ButtonManager import ButtonType
+from Game.Game import subscribeToEvent
+from Game.Game import GameEvents
+from Player.Food import Food
+from Player.Item import Item
+from Button.ButtonManager import ButtonEvents
+from Button.ButtonManager import ButtonType
 
 class RoomManager:
     def __init__(self):

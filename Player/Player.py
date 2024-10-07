@@ -18,16 +18,16 @@ class PlayerEvents:
 def isPlayerItemAvailable() -> bool:
     return Player.hasItem
 
-from Game import subscribeToEvent
-from Config import CharacterConfig
-from Character import Character
-from EnemyManager import EnemyEvents
-from EnemyManager import EnemyType
-from RoomManager import RoomEvents
-from ButtonManager import ButtonEvents
-from ButtonManager import ButtonType
-from Item import ItemType
-from Item import Item
+from Game.Game import subscribeToEvent
+from Game.Config import CharacterConfig
+from Player.Character import Character
+from Enemy.EnemyManager import EnemyEvents
+from Enemy.EnemyManager import EnemyType
+from Room.RoomManager import RoomEvents
+from Button.ButtonManager import ButtonEvents
+from Button.ButtonManager import ButtonType
+from Player.Item import ItemType
+from Player.Item import Item
 
 class ScoreType(Enum):
     ENEMY = 0

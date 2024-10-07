@@ -1,7 +1,7 @@
 import pygame
-from Config import GeneralConfig
-from Config import StatsConfig
-from Game import SCREEN
+from Game.Config import GeneralConfig
+from Game.Config import StatsConfig
+from Game.Game import SCREEN
 
 class Stat:
     def __init__(self, name: str, value: int, position: pygame.math.Vector2):

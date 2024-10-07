@@ -3,11 +3,11 @@ import pygame
 import os.path
 import random
 
-from Config import GeneralConfig
-from Config import ItemsConfig
-from Game import SCREEN
-from Game import DOOR_POSITION_X
-from Game import DOOR_POSITION_Y
+from Game.Config import GeneralConfig
+from Game.Config import ItemsConfig
+from Game.Game import SCREEN
+from Game.Game import DOOR_POSITION_X
+from Game.Game import DOOR_POSITION_Y
 
 class ItemType(Enum):
     BOW = 0

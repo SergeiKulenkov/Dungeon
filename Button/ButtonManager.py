@@ -1,12 +1,11 @@
 import pygame
 from enum import Enum
 
-from Config import GeneralConfig
-from Config import ButtonsConfig
-from Game import SCREEN
-from Game import DOOR_POSITION_X
-from Game import DOOR_POSITION_Y
-from Game import subscribeToEvent
+from Game.Config import GeneralConfig
+from Game.Config import ButtonsConfig
+from Game.Game import DOOR_POSITION_X
+from Game.Game import DOOR_POSITION_Y
+from Game.Game import subscribeToEvent
 
 class ButtonEvents:
     buttonPressedEventType = pygame.event.custom_type()
@@ -21,14 +20,14 @@ class ButtonType(Enum):
     USE_ITEM = 6
     QUIT = 7
 
-from Game import GameEvents
-from RoomManager import RoomEvents
-from RoomManager import RoomType
-from EnemyManager import EnemyEvents
-from Player import isPlayerItemAvailable
-from Player import PlayerEvents
-from Item import ItemType
-from Button import Button
+from Game.Game import GameEvents
+from Room.RoomManager import RoomEvents
+from Room.RoomManager import RoomType
+from Enemy.EnemyManager import EnemyEvents
+from Player.Player import isPlayerItemAvailable
+from Player.Player import PlayerEvents
+from Player.Item import ItemType
+from Button.Button import Button
 
 class ButtonManager:
     buttonLayouts = { RoomType.FOOD : [ButtonType.EAT, ButtonType.LEAVE],

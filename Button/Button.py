@@ -1,8 +1,8 @@
 import pygame
-from Game import SCREEN
-from Config import GeneralConfig
-from Config import ButtonsConfig
-from ButtonManager import ButtonType
+from Game.Game import SCREEN
+from Game.Config import GeneralConfig
+from Game.Config import ButtonsConfig
+from Button.ButtonManager import ButtonType
 
 class Outline:
     def __init__(self, colour: pygame.color, thickness: float):

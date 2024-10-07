@@ -1,11 +1,11 @@
 import pygame
 
-from Config import CharacterConfig
-from Config import StatsConfig
-from Game import BORDER_STATS
-from Item import Item
-from Item import ItemType
-from Stat import Stat
+from Game.Config import CharacterConfig
+from Game.Config import StatsConfig
+from Game.Game import BORDER_STATS
+from Player.Item import Item
+from Player.Item import ItemType
+from Player.Stat import Stat
 
 class Character:
     def __init__(self):

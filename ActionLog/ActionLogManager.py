@@ -1,16 +1,16 @@
 import pygame
 import random
 
-from Config import GeneralConfig
-from Config import ActionLogConfig
-from Game import SCREEN
-from Game import subscribeToEvent
-from RoomManager import RoomEvents
-from RoomManager import RoomType
-from Player import PlayerEvents
-from Item import ItemType
-from EnemyManager import EnemyEvents
-from EnemyManager import EnemyType
+from Game.Config import GeneralConfig
+from Game.Config import ActionLogConfig
+from Game.Game import SCREEN
+from Game.Game import subscribeToEvent
+from Room.RoomManager import RoomEvents
+from Room.RoomManager import RoomType
+from Player.Player import PlayerEvents
+from Player.Item import ItemType
+from Enemy.EnemyManager import EnemyEvents
+from Enemy.EnemyManager import EnemyType
 
 class Log:
     fontHeight = 0.0

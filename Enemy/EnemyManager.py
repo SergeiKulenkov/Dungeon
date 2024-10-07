@@ -9,12 +9,12 @@ class EnemyEvents():
     enemyDefeatedEvenType = pygame.event.custom_type()
     enemyTakenCriticalDamageEventType = pygame.event.custom_type()
 
-from Config import EnemyConfig
-from Game import subscribeToEvent
-from RoomManager import RoomEvents
-from RoomManager import RoomType
-from Player import PlayerEvents
-from Item import ItemType
+from Game.Config import EnemyConfig
+from Game.Game import subscribeToEvent
+from Room.RoomManager import RoomEvents
+from Room.RoomManager import RoomType
+from Player.Player import PlayerEvents
+from Player.Item import ItemType
 
 class EnemyType(Enum):
     SKELETON = 0
@@ -22,7 +22,7 @@ class EnemyType(Enum):
     ORC = 2
     SPIDER = 3
 
-from Enemy import Enemy
+from Enemy.Enemy import Enemy
 
 class EnemyManager:
     def __init__(self):

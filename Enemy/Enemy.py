@@ -1,14 +1,14 @@
 import pygame
 import os.path
 
-from EnemyManager import EnemyType
-from Stat import Stat
-from Config import GeneralConfig
-from Config import StatsConfig
-from Config import EnemyConfig
-from Game import SCREEN
-from Game import DOOR_POSITION_X
-from Game import DOOR_POSITION_Y
+from Enemy.EnemyManager import EnemyType
+from Player.Stat import Stat
+from Game.Config import GeneralConfig
+from Game.Config import StatsConfig
+from Game.Config import EnemyConfig
+from Game.Game import SCREEN
+from Game.Game import DOOR_POSITION_X
+from Game.Game import DOOR_POSITION_Y
 
 class Enemy:
     SKELETON_IMAGE = pygame.image.load(os.path.join(GeneralConfig.IMAGES_PATH, EnemyConfig.SKELETON_IMAGE))

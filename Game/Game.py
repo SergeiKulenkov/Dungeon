@@ -1,12 +1,12 @@
 from enum import Enum
 from typing import Any
 import os.path
-
 import pygame
-from Config import GeneralConfig
-from Config import GameConfig
-from Config import EnemyConfig
-from Config import RoomConfig
+
+from Game.Config import GeneralConfig
+from Game.Config import GameConfig
+from Game.Config import EnemyConfig
+from Game.Config import RoomConfig
 
 SCREEN = pygame.display.set_mode((GameConfig.SCREEN_WIDTH, GameConfig.SCREEN_HEIGHT))
 BORDER_ACTION = pygame.Rect(SCREEN.get_width() * GameConfig.BORDER_ACTION_OFFSET_X_PERCENT, 0, GameConfig.BORDER_WIDTH, SCREEN.get_height() - GameConfig.BORDER_STATS_OFFSET_Y)
@@ -29,17 +29,17 @@ def subscribeToEvent(eventType: pygame.event.EventType, subscriber: Any):
 def unSubscribeFromEvent(eventType: pygame.event.EventType, subscriber: Any):
     Game.eventHandler.unsubscribe(eventType, subscriber)
 
-from EventHandler import EventHandler
-from Player import Player
-from Player import PlayerEvents
-from Item import ItemType
-from ButtonManager import ButtonManager
-from ButtonManager import ButtonType
-from ButtonManager import ButtonEvents
-from RoomManager import RoomManager
-from EnemyManager import EnemyManager
-from EnemyManager import EnemyEvents
-from ActionLogManager import ActionLogManager
+from Game.EventHandler import EventHandler
+from Player.Player import Player
+from Player.Player import PlayerEvents
+from Player.Item import ItemType
+from Button.ButtonManager import ButtonManager
+from Button.ButtonManager import ButtonType
+from Button.ButtonManager import ButtonEvents
+from Room.RoomManager import RoomManager
+from Enemy.EnemyManager import EnemyManager
+from Enemy.EnemyManager import EnemyEvents
+from ActionLog.ActionLogManager import ActionLogManager
 
 class DelayType(Enum):
     NONE = 0
