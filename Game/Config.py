@@ -64,6 +64,7 @@ class RoomConfig:
     ITEM_VALUE = 'item'
     ARTIFACT_PROBABILITY = 0.25
     MAX_ITEMS_IN_ROW = 2
+    MAX_FOOD_IN_ROW = 1
     NEXT_ROOM_DELAY = 0.5
 
 class ActionLogConfig:

@@ -5,7 +5,7 @@ from Game.Config import ButtonsConfig
 from Button.ButtonManager import ButtonType
 
 class Outline:
-    def __init__(self, colour: pygame.color, thickness: float):
+    def __init__(self, colour: pygame.color.Color, thickness: float):
         self.colour = colour
         self.thickness = thickness
 
@@ -13,8 +13,9 @@ class Outline:
         pygame.draw.rect(SCREEN, self.colour, (x - self.thickness, y - self.thickness,
                                                 buttonWidth + self.thickness * 2, buttonHeight + self.thickness * 2))
 class Button:
-    def __init__(self, colour: pygame.color, x: float, y: float, width: float, height: float, type: ButtonType):
-        self.colour = colour
+    def __init__(self, colour: pygame.color.Color, x: float, y: float, width: float, height: float, type: ButtonType):
+        self._clicked = False
+        self._colour = colour
         self._position = pygame.math.Vector2(x, y)
         self._width = width
         self._height = height
@@ -36,11 +37,19 @@ class Button:
     def type(self) -> ButtonType:
         return self._type
 
+    @property
+    def clicked(self) -> bool:
+        return self._clicked
+
+    def changeColour(self, newColour: pygame.color.Color):
+        self._colour = newColour
+        self._clicked = not self._clicked
+
     def draw(self):
         if self.hasOutline and self.outline is not None:
             self.outline.draw(self._position.x, self._position.y, self._width, self._height)
 
-        pygame.draw.rect(SCREEN, self.colour, (self._position.x, self._position.y, self._width, self._height))
+        pygame.draw.rect(SCREEN, self._colour, (self._position.x, self._position.y, self._width, self._height))
         SCREEN.blit(self._text, (self._position.x + self.offsetX, self._position.y + self.offsetY))
 
     def checkHover(self, position: pygame.math.Vector2) -> bool:

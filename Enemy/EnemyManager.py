@@ -1,5 +1,6 @@
 import pygame
 import random
+import math
 from enum import Enum
 
 class EnemyEvents():
@@ -53,9 +54,9 @@ class EnemyManager:
         randomProbability = random.random()
         enemyProbabilities = list(EnemyConfig.ENEMIES_PROBABILITIES.items())
 
-        if self._easyEnemyCooldown >= 0:
+        if self._easyEnemyCooldown > 0:
             enemyProbabilities.pop(0)
-        if self._hardEnemyCooldown >= 0:
+        if self._hardEnemyCooldown > 0:
             enemyProbabilities.pop()
 
         for name, probability in enemyProbabilities:
@@ -64,16 +65,17 @@ class EnemyManager:
                 enemyType = EnemyType.__getitem__(name)
                 break
 
-        if self._easyEnemiesInRow >= EnemyConfig.EASY_ENEMIES_IN_A_ROW:
-            self._easyEnemiesInRow = 0
-            self._easyEnemyCooldown = EnemyConfig.EASY_ENEMY_COOLDOWN
+        if self._easyEnemyCooldown > 0:
+            self._easyEnemyCooldown -= 1
+            if self._easyEnemyCooldown <= 0:
+                self._easyEnemiesInRow = 0
         elif enemyType is EnemyType.SKELETON:
-            if self._easyEnemyCooldown >= 0:
-                self._easyEnemyCooldown -= 1
-            else:
-                self._easyEnemiesInRow += 1
+            self._easyEnemiesInRow += 1
+            if self._easyEnemiesInRow >= EnemyConfig.EASY_ENEMIES_IN_A_ROW:
+                self._easyEnemyCooldown = EnemyConfig.EASY_ENEMY_COOLDOWN
 
-        if self._hardEnemyCooldown >= 0:
+
+        if self._hardEnemyCooldown > 0:
             self._hardEnemyCooldown -= 1
         elif enemyType is EnemyType.SPIDER:
             self._hardEnemyCooldown = EnemyConfig.HARD_ENEMY_COOLDOWN
@@ -101,27 +103,28 @@ class EnemyManager:
             self._checkDefeat()
 
     def _onPlayerTriedParry(self):
-        self._startedAttack = True
-        pygame.event.post(self._enemyStartedAttackEvent)
+        if self._currentEnemy is not None:
+            self._startedAttack = True
+            pygame.event.post(self._enemyStartedAttackEvent)
 
     def _onItemUsed(self, itemType: ItemType, power: int):
-        damage = power
-        itemEnemyCombo = (itemType.name, self._currentEnemy.type.name)
+        if self._currentEnemy is not None:
+            damage = power
+            itemEnemyCombo = (itemType.name, self._currentEnemy.type.name)
 
-        for combo, multiplier in EnemyConfig.ITEM_INTERACTIONS.items():
-            if itemEnemyCombo == combo:
-                damage *= multiplier
+            for combo, multiplier in EnemyConfig.ITEM_INTERACTIONS.items():
+                if itemEnemyCombo == combo:
+                    damage = math.ceil(damage * multiplier)
+                    if multiplier > 1:
+                        self._enemyTakenCriticalDamageEvent.dict[EnemyConfig.CRITICAL_DAMAGE_VALUE] = damage
+                        pygame.event.post(self._enemyTakenCriticalDamageEvent)
+                    break
 
-                if multiplier > 1:
-                    self._enemyTakenCriticalDamageEvent.dict[EnemyConfig.CRITICAL_DAMAGE_VALUE] = damage
-                    pygame.event.post(self._enemyTakenCriticalDamageEvent)
-                break
-
-        self._currentEnemy.takeDamage(damage)
-        self._checkDefeat()
+            self._currentEnemy.takeDamage(damage)
+            self._checkDefeat()
 
     def finishAttack(self):
-        if self._startedAttack:
+        if self._currentEnemy is not None and self._startedAttack:
             self._startedAttack = False
             self._enemyAttackedEvent.dict[EnemyConfig.DAMAGE_VALUE] = -self._currentEnemy.damage
             pygame.event.post(self._enemyAttackedEvent)

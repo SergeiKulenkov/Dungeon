@@ -64,8 +64,8 @@ class ButtonManager:
 
     def _handleLeftMouseClick(self, mousePosition: pygame.math.Vector2):
         for button in self._buttons:
-            if button.checkHover(mousePosition):
-                button.colour = GeneralConfig.GREEN
+            if button.checkHover(mousePosition) and not button.clicked:
+                button.changeColour(GeneralConfig.GREEN)
                 self._buttonPressedEvent.dict[ButtonsConfig.BUTTON_TYPE_VALUE] = button._type
                 pygame.event.post(self._buttonPressedEvent)
                 break
@@ -81,15 +81,6 @@ class ButtonManager:
         for button in self._buttons:
             if button.type is type:
                 self._buttons.remove(button)
-                break
-
-    def _onEnemyAttacked(self, dmaage: int):
-        self._resetCombatButtons()
-
-    def _resetCombatButtons(self):
-        for button in self._buttons:
-            if button.colour is GeneralConfig.GREEN:
-                button.colour = GeneralConfig.ORANGE
                 break
 
     def _onGameStarted(self):
@@ -108,6 +99,15 @@ class ButtonManager:
             button = Button(GeneralConfig.ORANGE, positionX, positionY, ButtonsConfig.MENU_BUTTON_WIDTH, ButtonsConfig.MENU_BUTTON_HEIGHT, buttonType)
             self._buttons.append(button)
             positionY += ButtonsConfig.MENU_BUTTON_HEIGHT + ButtonsConfig.BUTTON_OFFSET_Y
+
+    def _onEnemyAttacked(self, dmaage: int):
+        self._resetCombatButtons()
+
+    def _resetCombatButtons(self):
+        for button in self._buttons:
+            if button.clicked:
+                button.changeColour(GeneralConfig.ORANGE)
+                break
 
     def _onItemUsed(self, type: ItemType, power: int):
         self._removeButton(ButtonType.USE_ITEM)

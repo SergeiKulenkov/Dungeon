@@ -26,6 +26,7 @@ class RoomManager:
         self._currentRoomType: RoomType = None
         self._roomEvent: Food | Item = None
         self._itemsInRow = 0
+        self._foodInRow = 0
 
         self._roomGeneratedEvent = pygame.event.Event(RoomEvents.roomGeneratedEventType, { RoomConfig.ROOM_TYPE_VALUE : None })
         self._foodEatenEvent = pygame.event.Event(RoomEvents.foodEatenEventType, { RoomConfig.FOOD_HP_VALUE : 0 })
@@ -37,6 +38,7 @@ class RoomManager:
 
     def reset(self):
         self._itemsInRow = 0
+        self._foodInRow = 0
 
     def _onGameStarted(self):
         self._generateRoom()
@@ -52,9 +54,13 @@ class RoomManager:
         if self._itemsInRow >= RoomConfig.MAX_ITEMS_IN_ROW:
             self._currentRoomType = RoomType.COMBAT
             self._itemsInRow = 0
+        if self._foodInRow >= RoomConfig.MAX_FOOD_IN_ROW:
+            self._currentRoomType = RoomType.COMBAT
+            self._foodInRow = 0
 
         match self._currentRoomType:
             case RoomType.FOOD:
+                self._foodInRow += 1
                 self._roomEvent = Food()
             case RoomType.ITEM:
                 self._itemsInRow += 1

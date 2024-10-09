@@ -105,6 +105,7 @@ class Player:
     def _takeDamage(self, damage: int):
         takingDamage = not self._triedParry
         if self._triedParry:
+            self._triedParry = False
             chance = random.randint(0, CharacterConfig.MAX_PARRY_LUCK)
             if self._character.luck >= chance:
                 pygame.event.post(self._parriedEvent)
@@ -130,8 +131,6 @@ class Player:
                 pygame.event.post(self._triedParryEvent)
             case ButtonType.USE_ITEM:
                 self._useItem()
-            case ButtonType.PARRY:
-                pass
 
     def _attack(self, damageMultiplier: float=1):
         self._attackedEvent.dict[CharacterConfig.ATTACK_VALUE] = self._character.damage * damageMultiplier
